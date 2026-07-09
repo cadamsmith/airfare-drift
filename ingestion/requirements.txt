@@ -1,0 +1,6 @@
+# Cloud Function (Gen2) runtime dependencies.
+# The local --dry-run only needs `requests`; the other two are for the deployed
+# function (BigQuery load + the functions-framework HTTP runtime).
+requests>=2.32,<3
+google-cloud-bigquery>=3.25,<4
+functions-framework>=3.8,<4

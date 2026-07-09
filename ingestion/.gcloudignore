@@ -1,0 +1,4 @@
+# Keep the deployed function source minimal.
+.dryrun_output.json
+__pycache__/
+*.pyc
