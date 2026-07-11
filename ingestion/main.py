@@ -1,9 +1,10 @@
 """
 Airfare Drift — fare ingestion Cloud Function.
 
-Fetches current round-trip fares for the fixed route list from SerpApi's Google
-Flights engine and appends the RAW responses to a date-partitioned BigQuery
-table. One row per route per run, storing the full API response body verbatim.
+Fetches round-trip ATL–CMN fares for a panel of fixed future departure dates
+(see config.build_panel) from SerpApi's Google Flights engine and appends the
+RAW responses to a date-partitioned BigQuery table. One row per panel query per
+run, storing the full API response body verbatim.
 
 Design rules (see CLAUDE.md):
   - Constraint #3 (keep raw data messy): we store the ENTIRE response body as-is
@@ -11,8 +12,9 @@ Design rules (see CLAUDE.md):
     cleaning happens downstream in Dataform staging. This is the one irreversible
     decision here — once you drop the offer distribution at ingestion you can
     never recover it.
-  - Constraint #1 (SerpApi budget): one call per route (the round-trip total
-    arrives in a single response). 10 routes/run.
+  - Constraint #1 (SerpApi budget): one call per panel slot (the round-trip total
+    + the whole offer cross-section arrive in a single response). The panel is
+    capped at config.MAX_CALLS_PER_RUN calls/run to stay under 250/mo.
   - Append-only: duplicate/late snapshots are preserved on purpose (staging
     dedups). We never upsert.
 
@@ -30,11 +32,17 @@ import argparse
 import json
 import os
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import requests
 
-from config import ADVANCE_DAYS, CURRENCY, RETURN_GAP_DAYS, ROUTES
+from config import (
+    CURRENCY,
+    DESTINATION,
+    MAX_CALLS_PER_RUN,
+    ORIGIN,
+    build_panel,
+)
 
 SERPAPI_URL = "https://serpapi.com/search"
 
@@ -42,12 +50,6 @@ SERPAPI_URL = "https://serpapi.com/search"
 # in dev and prod without hardcoded dataset names.
 DEFAULT_DATASET = "airfare_raw"
 DEFAULT_TABLE = "fare_snapshots"
-
-
-def query_dates(snapshot_date: date) -> tuple[date, date]:
-    """The one consistent convention: fixed advance + fixed return gap."""
-    outbound = snapshot_date + timedelta(days=ADVANCE_DAYS)
-    return outbound, outbound + timedelta(days=RETURN_GAP_DAYS)
 
 
 def fetch_route(api_key, origin, dest, outbound_date, return_date, timeout=30):
@@ -74,22 +76,25 @@ def fetch_route(api_key, origin, dest, outbound_date, return_date, timeout=30):
     return resp.status_code, resp.text
 
 
-def collect_snapshot(api_key, routes=ROUTES, snapshot_dt=None):
+def collect_snapshot(api_key, snapshot_dt=None):
     """
-    Fetch every route once and build one raw row per route. snapshot_date is
-    fixed at run start (so all rows share a partition); captured_at is per-row.
+    Fetch the ATL–CMN panel for this run and build one raw row per panel slot.
+    snapshot_date is fixed at run start (so all rows share a partition);
+    captured_at is per-row.
     """
     snapshot_dt = snapshot_dt or datetime.now(timezone.utc)
     snapshot_date = snapshot_dt.date()
-    outbound, return_date = query_dates(snapshot_date)
+    panel = build_panel(snapshot_date)
 
     rows = []
-    for origin, dest in routes:
+    for slot in panel:
         try:
-            status, body = fetch_route(api_key, origin, dest, outbound, return_date)
+            status, body = fetch_route(
+                api_key, ORIGIN, DESTINATION, slot.outbound_date, slot.return_date
+            )
         except requests.exceptions.RequestException as exc:
             # Network-level failure (timeout, connection drop). Isolate it so one
-            # bad route doesn't drop the other 9's snapshot for this run: record an
+            # bad slot doesn't drop the rest of the panel for this run: record an
             # error row with a NULL http_status. Staging treats http_status IS NULL
             # as a failed fetch. (HTTP 4xx/5xx never reach here — requests only
             # raises on transport errors, so those are already captured as rows.)
@@ -98,12 +103,12 @@ def collect_snapshot(api_key, routes=ROUTES, snapshot_dt=None):
             {
                 "captured_at": datetime.now(timezone.utc).isoformat(),
                 "snapshot_date": snapshot_date.isoformat(),
-                "origin": origin,
-                "destination": dest,
-                "outbound_date": outbound.isoformat(),
-                "return_date": return_date.isoformat(),
-                "advance_days": ADVANCE_DAYS,
-                "return_gap_days": RETURN_GAP_DAYS,
+                "origin": ORIGIN,
+                "destination": DESTINATION,
+                "outbound_date": slot.outbound_date.isoformat(),
+                "return_date": slot.return_date.isoformat(),
+                "advance_days": slot.advance_days,
+                "return_gap_days": slot.return_gap_days,
                 "currency": CURRENCY,
                 "http_status": status,
                 "raw_response": body,  # full response body, stored as-is
@@ -165,7 +170,7 @@ def ingest(request):  # noqa: ARG001 — Cloud Functions HTTP entry point
 
     rows = collect_snapshot(api_key)
     n = write_to_bigquery(rows, project, dataset, table)
-    return (f"Ingested {n} route snapshots for {rows[0]['snapshot_date']}\n", 200)
+    return (f"Ingested {n} ATL–CMN panel snapshots for {rows[0]['snapshot_date']}\n", 200)
 
 
 # --- Local dry run ----------------------------------------------------------
@@ -187,39 +192,47 @@ def _summarize(row):
 def _dry_run():
     api_key = os.environ.get("SERPAPI_KEY")
     if not api_key:
-        sys.exit("Set SERPAPI_KEY for the dry run (spends 10 SerpApi searches).")
+        sys.exit(
+            f"Set SERPAPI_KEY for the dry run (spends up to {MAX_CALLS_PER_RUN} "
+            "SerpApi searches)."
+        )
 
     rows = collect_snapshot(api_key)
     out_path = os.path.join(os.path.dirname(__file__), ".dryrun_output.json")
     with open(out_path, "w") as f:
         json.dump(rows, f, indent=2)
 
-    outbound = rows[0]["outbound_date"]
-    print(f"Fetched {len(rows)} routes (depart {outbound}) -> {out_path}\n")
-    any_zero = False
+    snap = rows[0]["snapshot_date"]
+    print(
+        f"Fetched {len(rows)} {ORIGIN}-{DESTINATION} panel queries "
+        f"(snapshot {snap}) -> {out_path}\n"
+    )
+    any_bad = False
     for r in rows:
         n_offers, cheapest = _summarize(r)
         flag = ""
         if r["http_status"] != 200:
             flag = "  <-- HTTP ERROR"
-            any_zero = True
+            any_bad = True
         elif n_offers == 0:
             flag = "  <-- ZERO OFFERS"
-            any_zero = True
+            any_bad = True
         print(
-            f"  {r['origin']}-{r['destination']}: http {r['http_status']}, "
+            f"  depart {r['outbound_date']} (lead {r['advance_days']}d, "
+            f"stay {r['return_gap_days']}d): http {r['http_status']}, "
             f"{n_offers} offers, cheapest {cheapest} {r['currency']}{flag}"
         )
 
-    if any_zero:
+    if any_bad:
         print(
-            "\n⚠️  Some routes returned no offers / an error — inspect "
+            "\n⚠️  Some panel queries returned no offers / an error — inspect "
             ".dryrun_output.json before building on this."
         )
     else:
         print(
-            "\n✅ All 10 routes returned offers. Loop is sound. This did NOT write "
-            "to BigQuery — the accumulation clock starts only once deployed."
+            f"\n✅ All {len(rows)} panel queries returned offers. Loop is sound. This "
+            "did NOT write to BigQuery — the accumulation clock starts only once "
+            "deployed."
         )
 
 
