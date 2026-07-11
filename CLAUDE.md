@@ -27,7 +27,7 @@ This brief is deliberately thin. The deep context lives in `docs/` — **read th
 
 ## The route: ATL–CMN
 
-Single route, modeled in depth. Atlanta → Casablanca: a **thin, connecting-only** long-haul leisure/VFR market (no nonstop; RAM doesn't fly it). Queried with one consistent convention **per panel slot** (round-trip, USD, economy, fixed return gap), varying only the departure date and lead time so the panel spans the booking curve and the calendar. Both endpoints are major airports with reliable Google Flights coverage. (Panel design & rationale: `docs/decisions.md`.)
+Single route, modeled in depth. Atlanta → Casablanca: a **thin, connecting-only** long-haul leisure market (no nonstop; RAM doesn't fly it). Queried with one consistent convention **per panel slot** (round-trip, USD, economy, fixed return gap), varying only the departure date and lead time so the panel spans the booking curve and the calendar. Both endpoints are major airports with reliable Google Flights coverage. (Panel design & rationale: `docs/decisions.md`.)
 
 ## Tech stack
 
