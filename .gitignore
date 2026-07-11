@@ -11,3 +11,8 @@ __pycache__/
 
 # Ingestion dry-run output
 ingestion/.dryrun_output.json
+
+# Dataform
+node_modules/
+.df-credentials.json
+.dataform/

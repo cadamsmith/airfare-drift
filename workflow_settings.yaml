@@ -1,0 +1,25 @@
+# Dataform project settings for the Airfare Drift warehouse.
+#
+# Dataform Core 3.x config (replaces the legacy dataform.json). The raw source
+# table is declared under definitions/sources/ so it shows up as a real DAG
+# dependency; every downstream layer refs it — dataset names are NEVER hardcoded
+# in SQL (constraint: environments/governance, docs/warehouse.md).
+#
+# Dev/prod separation: in managed Dataform this is done with release
+# configurations + workspace compilation overrides (console-side, not in files).
+# `datasetSuffix` / `namePrefix` below are the file-level hooks a CI release can
+# set (e.g. datasetSuffix: _dev) so a dev run writes to isolated datasets. Prod
+# runs with no suffix. Locally, `npx dataform compile --vars=...` overrides vars.
+
+dataformCoreVersion: 3.0.0
+defaultProject: airfare-drift
+defaultDataset: airfare_staging
+defaultAssertionDataset: airfare_assertions
+defaultLocation: US
+
+vars:
+  # Route scope lives in one place so staging (and later marts) filter
+  # consistently. Ingestion is the source of truth for the route; this mirrors
+  # it for the read side.
+  route_origin: ATL
+  route_destination: CMN
