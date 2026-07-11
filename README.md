@@ -1,15 +1,16 @@
-# Airfare Drift
+# ✈️ airfare drift
 
 **A governed, tested, dimensional data warehouse that models the full pricing microstructure of one thin transatlantic air market — Atlanta ⇄ Casablanca (ATL–CMN) — and detects when it's pricing abnormally.**
 
 The centerpiece isn't "fares go up near departure" (that impresses nobody). It's a **residual anomaly layer**: the deviation of an observed fare from a *fitted expectation* built out of the route's own booking curve and seasonality — so the signal is *"this fare is 2.6σ above what this lead time and season should cost,"* not a comparison against a flat historical average.
 
 > **What it is:** an analytics / data-engineering showcase.
+> 
 > **What it isn't:** a "should I book now?" tool. Google Flights owns the live quote. This owns the question *"is ATL–CMN pricing normally given the lead time, the season, and the route's own history — and if not, why?"* Every figure is stamped with an explicit *"as of <observation time>."*
 
 ---
 
-## Why one route, in depth
+## why one route, in depth
 
 Ten near-identical route pipelines read as one pipeline copy-pasted. **One route modeled richly** — booking curve, seasonality, routing/carrier competition, price dispersion, holiday-event correlation — reads as genuine analytical engineering.
 
@@ -21,7 +22,7 @@ ATL–CMN was chosen because it's a genuinely interesting market to model, not a
 
 The control lives *inside* the route: observed fare vs. the model's own fitted surface. The anomaly is the residual.
 
-## Pipeline
+## pipeline
 
 ```mermaid
 flowchart LR
@@ -37,7 +38,7 @@ flowchart LR
 
 A single round-trip call captures a full offer cross-section — price, routing, layovers, operating carrier, aircraft, departure times, codeshares, and Google's own price-history — stored **verbatim and uncleaned** on purpose. Parsing, unnesting, dedup, and derivation all happen downstream in Dataform, which is what makes that layer worth writing.
 
-## Engineering highlights
+## engineering highlights
 
 - **Incremental correctness as the core challenge.** Incremental models scan only new partitions — both a cost guardrail (stay in the BigQuery free tier) and the technical point of the project. The residual z-scores and the SCD2 dimension are treated as the incremental-correctness problems they are.
 - **Messy-by-design raw layer.** Duplicate snapshots, late arrivals, deeply-nested offer arrays, and API quirks are preserved intact; cleaning is a downstream transform, not an ingestion side-effect.
@@ -46,7 +47,7 @@ A single round-trip call captures a full offer cross-section — price, routing,
 - **Resilient continuous ingestion:** per-call error isolation, scheduler retries with bounded backoff, and a freshness assertion as a detection backstop — because the anomaly layer is only as good as its uninterrupted history.
 - **Two consumption paths over one warehouse, by design:** a zero-code Looker Studio deep-dive (the "I know BI tools" signal) and a bespoke ASP.NET Core analytical front-end backed by a real serving layer (cached query / serving table — never a per-page mart scan) plus a Postgres OLTP store for alert subscriptions and human-in-the-loop anomaly annotations.
 
-## Tech stack
+## tech stack
 
 | Layer | Tools |
 |---|---|
@@ -57,7 +58,7 @@ A single round-trip call captures a full offer cross-section — price, routing,
 
 Runs inside free tiers with a $0–5/month cost target.
 
-## Status
+## status
 
 This is an actively-built project; the ingestion clock is running so history accumulates while the warehouse is built on top of it.
 
@@ -67,7 +68,7 @@ This is an actively-built project; the ingestion clock is running so history acc
 
 Signals mature honestly: the booking curve fills in over weeks, seasonality over a year. Until a layer's data matures, any surface shows context and hands off — it never over-promises a call the data can't yet support.
 
-## Repository layout
+## repository layout
 
 ```
 ingestion/   Python Cloud Function — SerpApi → BigQuery raw snapshots
@@ -76,7 +77,7 @@ scripts/      Standalone smoke tests (e.g. SerpApi connectivity)
 CLAUDE.md     Internal working brief
 ```
 
-## Running the ingestion locally
+## running the ingestion locally
 
 ```bash
 python -m venv .venv && ./.venv/bin/pip install requests google-cloud-bigquery
