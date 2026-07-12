@@ -6,6 +6,13 @@ config {
   bigquery: {
     partitionBy: "snapshot_date",
     clusterBy: ["origin", "destination"]
+    // No updatePartitionFilter on purpose. It would prune the MERGE's target
+    // scan, but any FIXED window can drift below the `>= MAX(self)` source
+    // boundary after a multi-day pipeline gap — reprocessed boundary rows would
+    // then miss their existing partition and INSERT duplicates. The costly scan
+    // here is the SOURCE (raw JSON), already bounded by the watermark below; the
+    // target is one thin route (~2.4k rows/yr), so an unbounded uniqueKey merge
+    // is cheap and always correct. Correctness > premature target pruning.
   },
   assertions: {
     uniqueKey: ["snapshot_date", "outbound_date", "return_date"]
@@ -31,8 +38,11 @@ WITH scoped AS (
   FROM ${ref("fare_snapshots")}
   WHERE origin = '${dataform.projectConfig.vars.route_origin}'
     AND destination = '${dataform.projectConfig.vars.route_destination}'
+  -- `>=` (not `>`) reprocesses the boundary partition so a same-day re-run picks
+  -- up late/retried arrivals into today's partition; the MERGE + QUALIFY below
+  -- make that idempotent. Still scans one partition, never the whole raw table.
   ${when(incremental(),
-    `AND snapshot_date > (SELECT MAX(snapshot_date) FROM ${self()})`)}
+    `AND snapshot_date >= (SELECT MAX(snapshot_date) FROM ${self()})`)}
 ),
 
 deduped AS (

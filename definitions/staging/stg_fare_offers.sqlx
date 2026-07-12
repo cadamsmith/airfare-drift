@@ -6,6 +6,11 @@ config {
   bigquery: {
     partitionBy: "snapshot_date",
     clusterBy: ["origin", "destination", "offer_list"]
+    // No updatePartitionFilter — see stg_fare_snapshots for the rationale (a
+    // fixed window can drift below the source watermark after a gap → dup inserts).
+  },
+  assertions: {
+    uniqueKey: ["snapshot_date", "outbound_date", "return_date", "offer_list", "offer_index", "leg_index"]
   }
 }
 
@@ -21,8 +26,10 @@ WITH valid_snapshots AS (
     payload
   FROM ${ref("stg_fare_snapshots")}
   WHERE is_valid_fetch
+  -- `>=` reprocesses the boundary partition (idempotent via MERGE + uniqueKey),
+  -- so late/retried snapshots that reached staging after a same-day run still flow through.
   ${when(incremental(),
-    `AND snapshot_date > (SELECT MAX(snapshot_date) FROM ${self()})`)}
+    `AND snapshot_date >= (SELECT MAX(snapshot_date) FROM ${self()})`)}
 ),
 
 offers AS (

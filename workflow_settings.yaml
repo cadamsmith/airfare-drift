@@ -23,3 +23,9 @@ vars:
   # it for the read side.
   route_origin: ATL
   route_destination: CMN
+  # The modeled product for the booking-curve / seasonal / anomaly layers: a
+  # 7-day round trip (mirrors ingestion config.DEFAULT_RETURN_GAP_DAYS). Baselines
+  # and the anomaly fact filter to this so a 14/21-day trip never scores against a
+  # 7-day-dominated cell (a stay-length product confound). Other stays are kept in
+  # int_trip_fares for a future stay-length model.
+  default_stay_days: "7"
