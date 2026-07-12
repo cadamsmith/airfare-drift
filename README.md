@@ -1,20 +1,22 @@
 # ✈️ airfare-drift
 
-A governed, tested, dimensional data warehouse for one thin transatlantic air market — Atlanta ⇄ Casablanca (ATL–CMN) — that flags when the route prices abnormally.
+A governed, tested, dimensional data warehouse for one thin transatlantic market — Atlanta ⇄ Casablanca (ATL–CMN) — that flags when the route prices abnormally.
 
-The signal is not "fares go up near departure." It's a **residual anomaly layer**: the deviation of an observed fare from a *fitted expectation* built from the route's own booking curve and seasonality, so a flag reads *"this fare is 2.6σ above what this lead time and season should cost"* rather than a comparison against a flat historical average.
+Not "fares rise near departure." A **residual anomaly layer**: a fare's deviation from a _fitted expectation_ built from the route's own booking curve and seasonality — a flag reads _"2.6 standard deviations above what this lead time and season should cost."_
 
-> **What it is:** an analytics / data-engineering project answering *"is ATL–CMN pricing normally given the lead time, the season, and the route's own history, and if not, why?"*
+> **Is:** an analytics / data-engineering project answering _"is ATL–CMN pricing normally for this lead time and season, and if not, why?"_
 >
-> **What it isn't:** a "should I book now?" tool. Google Flights owns the live quote. Every figure carries an explicit *"as of <observation time>."*
+> **Isn't:** a "should I book now?" tool. Every figure is _"as of <observation time>."_
+
+![test](./docs/media/route-path.gif)
 
 ---
 
 ## about the route
 
-ATL–CMN is a **thin, connecting-only market** — no nonstop exists (Royal Air Maroc doesn't fly it), so the same trip routes via Montreal, Paris, JFK, etc., across multiple carriers, with wide price dispersion (a single snapshot spanned $1,132 → $1,769). The competitive structure is **routing / hub / carrier competition**, far richer than a single-carrier price series — and every API call returns a whole market cross-section (many itineraries × legs), feeding a booking-curve model that's normally starved for data.
+ATL–CMN is a **thin, connecting-only market** — no nonstop (Royal Air Maroc doesn't fly it), so the trip routes via Montreal, Paris, JFK, etc. across carriers, with wide dispersion (one snapshot: $1,132 → $1,769). The structure is **routing / hub / carrier competition**, and every API call returns a whole market cross-section (itineraries × legs) feeding a normally data-starved booking-curve model.
 
-The project covers this one route in depth rather than many routes shallowly — booking curve, seasonality, routing/carrier competition, price dispersion, holiday-event correlation. The control lives *inside* the route: observed fare vs. the model's own fitted surface, and the anomaly is the residual.
+Deep on one route, not shallow on many — booking curve, seasonality, carrier competition, dispersion, holiday-event correlation. The control lives _inside_ the route: observed fare vs. its own fitted surface; the anomaly is the residual.
 
 ## pipeline
 
@@ -43,12 +45,12 @@ A single round-trip call captures a full offer cross-section — price, routing,
 
 ## tech stack
 
-| Layer | Tools |
-|---|---|
-| Warehouse / transform | BigQuery + Dataform (SQLX, incremental models, assertions, environments) |
-| Ingestion | Python Cloud Function on Cloud Scheduler → date-partitioned raw BigQuery tables |
-| Sources | SerpApi Google Flights engine (live fares), OpenFlights reference data, a Moroccan holiday/events calendar |
-| Consumption | Looker Studio (native BQ connector) · ASP.NET Core MVC (`Google.Cloud.BigQuery.V2`, a JS charting lib, EF Core / Npgsql over Postgres) |
+| Layer                 | Tools                                                                                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Warehouse / transform | BigQuery + Dataform (SQLX, incremental models, assertions, environments)                                                               |
+| Ingestion             | Python Cloud Function on Cloud Scheduler → date-partitioned raw BigQuery tables                                                        |
+| Sources               | SerpApi Google Flights engine (live fares), OpenFlights reference data, a Moroccan holiday/events calendar                             |
+| Consumption           | Looker Studio (native BQ connector) · ASP.NET Core MVC (`Google.Cloud.BigQuery.V2`, a JS charting lib, EF Core / Npgsql over Postgres) |
 
 Runs inside free tiers with a $0–5/month cost target.
 
