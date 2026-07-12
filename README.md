@@ -1,4 +1,4 @@
-# ✈️ airfare drift
+# ✈️ airfare-drift
 
 A governed, tested, dimensional data warehouse for one thin transatlantic air market — Atlanta ⇄ Casablanca (ATL–CMN) — that flags when the route prices abnormally.
 
