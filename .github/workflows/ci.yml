@@ -1,0 +1,60 @@
+# Minimal CI for Airfare Drift.
+#
+# Two fast, secret-free jobs that guard the two codebases on every push/PR:
+#
+#   dataform-compile — `dataform compile` is STATIC analysis (no BigQuery
+#     connection, no credentials). It catches a broken ref(), an SQLX syntax
+#     error, or a bug in includes/*.js before the change reaches the scheduled
+#     prod compile — which otherwise only runs every ~2 days, so a bad commit to
+#     main could silently skip a whole transform cycle.
+#
+#   python — ruff lint + pytest on the ingestion panel builder. The tests pin the
+#     SerpApi budget cap (constraint #1) and the request-param invariants; no
+#     SerpApi/BigQuery access needed.
+#
+# Deliberately NOT here: running the actual pipeline against BigQuery (costs
+# money, needs the SerpApi key, would fight the no-full-refresh incremental
+# discipline) and any deploy/CD (folds into the deferred Terraform capstone).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to a branch cancels the previous in-flight run for it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dataform-compile:
+    name: Dataform compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Dataform CLI
+        run: npm install -g @dataform/cli@3.0.61
+      - name: Compile the warehouse DAG
+        # Static compile only — resolves refs/includes/assertions, no warehouse
+        # access. Exits non-zero on any compilation error.
+        run: dataform compile
+
+  python:
+    name: Lint + test (ingestion)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"  # matches the deployed Cloud Function runtime
+      - name: Install dev tooling
+        run: pip install -r requirements-dev.txt
+      - name: Ruff lint
+        run: ruff check .
+      - name: Pytest
+        run: pytest -q

@@ -1,0 +1,18 @@
+# Dev tooling config for the Python ingestion surface (ruff + pytest).
+# Runtime deps live in ingestion/requirements.txt; dev/CI-only deps in
+# requirements-dev.txt. There is no package build here — this file only carries
+# linter and test-runner settings.
+
+[tool.ruff]
+target-version = "py312"  # matches the deployed Cloud Function runtime (python312)
+line-length = 100
+
+[tool.ruff.lint]
+# E/F = pyflakes+pycodestyle, I = import sorting, B = bugbear, UP = pyupgrade.
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+# main.py/config.py import each other as top-level modules (`from config import`),
+# so put ingestion/ on the path rather than requiring a package install.
+pythonpath = ["ingestion"]
+testpaths = ["ingestion/tests"]

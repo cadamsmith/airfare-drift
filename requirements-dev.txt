@@ -1,0 +1,4 @@
+# Dev/CI-only tooling. NOT installed into the Cloud Function (see
+# ingestion/requirements.txt for runtime deps). Pinned so CI is reproducible.
+ruff==0.9.6
+pytest==8.3.4
