@@ -32,10 +32,9 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
-
 from config import (
     CURRENCY,
     DESTINATION,
@@ -82,7 +81,7 @@ def collect_snapshot(api_key, snapshot_dt=None):
     snapshot_date is fixed at run start (so all rows share a partition);
     captured_at is per-row.
     """
-    snapshot_dt = snapshot_dt or datetime.now(timezone.utc)
+    snapshot_dt = snapshot_dt or datetime.now(UTC)
     snapshot_date = snapshot_dt.date()
     panel = build_panel(snapshot_date)
 
@@ -101,7 +100,7 @@ def collect_snapshot(api_key, snapshot_dt=None):
             status, body = None, f"REQUEST_ERROR: {exc!r}"
         rows.append(
             {
-                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "captured_at": datetime.now(UTC).isoformat(),
                 "snapshot_date": snapshot_date.isoformat(),
                 "origin": ORIGIN,
                 "destination": DESTINATION,
