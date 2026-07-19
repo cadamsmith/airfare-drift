@@ -1,5 +1,6 @@
 config {
   type: "incremental",
+  tags: ["staging"],
   schema: "airfare_staging",
   description: "Tidy offer×leg rows — the deeply-nested raw_response flattened (grain: snapshot × offer × leg). best_flights and other_flights are unioned with an offer_list label; each offer's flights array is unnested to legs. STRUCTURAL ONLY: unnest, cast, standardize codes/timestamps. Analytical derivations (days_to_departure, stop count, routing/hub, dispersion) belong in intermediate, per constraint #3. Reads only valid fetches from stg_fare_snapshots. Incremental by snapshot_date.",
   uniqueKey: ["snapshot_date", "outbound_date", "return_date", "offer_list", "offer_index", "leg_index"],

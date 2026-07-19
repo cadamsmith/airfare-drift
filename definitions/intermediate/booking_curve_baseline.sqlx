@@ -1,5 +1,6 @@
 config {
   type: "view",
+  tags: ["intermediate", "baseline"],
   schema: "airfare_intermediate",
   description: "The booking curve: expected CHEAPEST fare vs lead time (grain: one row per lead_time_bucket) for the DEFAULT-STAY product. Marginal over departure_month — sums the additive sufficient stats of int_daily_fare_stats by lead bucket (no history rescan). MATURITY: is_reliable gates on DISTINCT ANCHORS (independent trips), not n_observations (the panel re-observes each anchor, inflating observation count). stddev_fare is NULL when n_observations < 2. This marginal is for reporting/EDA and as a sparse-cell fallback; it is NOT the residual model's primary predictor — the panel makes lead & month collinear, so the honest expected surface is the joint (lead × month) cell in the residual model. Per-segment (hub/carrier/stay) baselines are DEFERRED, not dropped.",
   columns: {

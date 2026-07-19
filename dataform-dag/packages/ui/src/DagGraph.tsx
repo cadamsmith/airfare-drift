@@ -1,7 +1,9 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import {
+  BaseEdge,
   Background,
   Controls,
+  getBezierPath,
   Handle,
   MarkerType,
   MiniMap,
@@ -12,19 +14,21 @@ import {
   useNodesState,
   useReactFlow,
   type Edge,
+  type EdgeProps,
   type Node,
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { NodeType } from "@dataform-dag/core";
-import type { FlowGraph } from "./graphToFlow.js";
+import type { FlowGraph, Point } from "./graphToFlow.js";
 
 export interface DagGraphProps {
   graph: FlowGraph;
   selectedId: string | null;
   /** Bumped by the host asking to focus a node; pans/zooms to it. */
   focus: { nodeId: string; nonce: number } | null;
-  onSelectNode: (nodeId: string) => void;
+  /** A node id to select, or null to clear the selection (e.g. clicking empty canvas). */
+  onSelectNode: (nodeId: string | null) => void;
 }
 
 type ModelNodeData = {
@@ -51,6 +55,57 @@ const ModelNode = memo(function ModelNode({ data }: NodeProps<ModelNode>) {
 
 const nodeTypes = { model: ModelNode };
 
+/** Rounded-corner SVG path through ELK's routed points; short segments keep tight corners intact. */
+function roundedPath(points: Point[], radius = 8): string {
+  if (points.length < 2) return "";
+  const first = points[0]!;
+  const parts = [`M ${first.x},${first.y}`];
+  for (let i = 1; i < points.length - 1; i++) {
+    const p0 = points[i - 1]!;
+    const p1 = points[i]!;
+    const p2 = points[i + 1]!;
+    const r = Math.min(radius, dist(p0, p1) / 2, dist(p1, p2) / 2);
+    const a = along(p1, p0, r);
+    const b = along(p1, p2, r);
+    parts.push(`L ${a.x},${a.y}`, `Q ${p1.x},${p1.y} ${b.x},${b.y}`);
+  }
+  const last = points[points.length - 1]!;
+  parts.push(`L ${last.x},${last.y}`);
+  return parts.join(" ");
+}
+function dist(a: Point, b: Point): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+function along(from: Point, to: Point, d: number): Point {
+  const len = dist(from, to) || 1;
+  return { x: from.x + ((to.x - from.x) / len) * d, y: from.y + ((to.y - from.y) / len) * d };
+}
+
+/**
+ * Edge that draws ELK's routed orthogonal polyline. Nodes are locked, so the routed points always
+ * match the live endpoints; the bezier branch only covers the dagre fallback layout, which produces
+ * no routed points.
+ */
+const ElkEdge = memo(function ElkEdge(props: EdgeProps) {
+  const points = (props.data as { points?: Point[] } | undefined)?.points;
+  let path: string;
+  if (points && points.length >= 2) {
+    path = roundedPath(points);
+  } else {
+    [path] = getBezierPath({
+      sourceX: props.sourceX,
+      sourceY: props.sourceY,
+      sourcePosition: props.sourcePosition,
+      targetX: props.targetX,
+      targetY: props.targetY,
+      targetPosition: props.targetPosition,
+    });
+  }
+  return <BaseEdge id={props.id} path={path} markerEnd={props.markerEnd} style={props.style} />;
+});
+
+const edgeTypes = { elk: ElkEdge };
+
 /** React Flow canvas. Owns only rendering + focus; all graph shape comes from {@link FlowGraph}. */
 export function DagGraph(props: DagGraphProps): JSX.Element {
   return (
@@ -61,8 +116,8 @@ export function DagGraph(props: DagGraphProps): JSX.Element {
 }
 
 function DagCanvas({ graph, selectedId, focus, onSelectNode }: DagGraphProps): JSX.Element {
-  // useNodesState/useEdgesState (not raw controlled props) so nodes stay interactive — draggable and
-  // selectable. Controlled `nodes=` without an onNodesChange handler renders them frozen (RF #002).
+  // useNodesState/useEdgesState (not raw controlled props): controlled `nodes=` without an
+  // onNodesChange handler renders them frozen (RF #002), even with dragging off.
   const [nodes, setNodes, onNodesChange] = useNodesState<ModelNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -82,7 +137,7 @@ function DagCanvas({ graph, selectedId, focus, onSelectNode }: DagGraphProps): J
     }
     return { activeEdges: e, activeNodes: n };
   }, [focusId, graph.edges]);
-  // Rebuild positions from the dagre layout only when the graph itself changes (preserves drags).
+  // Build nodes/edges whenever the graph (layout) changes.
   useEffect(() => {
     setNodes(
       graph.nodes.map((n) => ({
@@ -101,7 +156,13 @@ function DagCanvas({ graph, selectedId, focus, onSelectNode }: DagGraphProps): J
       })),
     );
     setEdges(
-      graph.edges.map((e) => ({ id: e.id, source: e.source, target: e.target, type: "default" })),
+      graph.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        type: "elk",
+        data: { points: e.points },
+      })),
     );
   }, [graph, setNodes, setEdges]);
   // Re-derive emphasis (selection ring + focus dimming) without disturbing positions.
@@ -154,11 +215,15 @@ function DagCanvas({ graph, selectedId, focus, onSelectNode }: DagGraphProps): J
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={(_, node) => onSelectNode(node.id)}
+      onPaneClick={() => onSelectNode(null)}
       onNodeMouseEnter={(_, node) => setHoveredId(node.id)}
       onNodeMouseLeave={() => setHoveredId(null)}
+      nodesDraggable={false}
+      nodesConnectable={false}
       minZoom={0.2}
       fitView
       fitViewOptions={{ padding: 0.2 }}

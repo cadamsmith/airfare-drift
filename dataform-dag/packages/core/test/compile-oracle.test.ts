@@ -43,12 +43,14 @@ describe("regex parser vs. dataform compile --json (fidelity oracle)", () => {
     expect(compiled.nodes.size).toBe(24); // + 8 inline-assertion actions
   });
 
-  it("agrees with compile on every file-based node's type and dependency edges", () => {
+  it("agrees with compile on every file-based node's type, tags, and dependency edges", () => {
     for (const [id, node] of parsed.nodes) {
       const truth = compiled.nodes.get(id);
       expect(truth, `compiled graph missing ${id}`).toBeDefined();
       // Type must match — a config comment carrying an apostrophe must not derail type detection.
       expect(node.type, `type mismatch for ${id}`).toBe(truth!.type);
+      // Tags must match (compile emits null for none; the parser emits []).
+      expect(new Set(node.tags), `tags mismatch for ${id}`).toEqual(new Set(truth!.tags));
       // Compare edge SETS: parser and compile both key deps by target name.
       expect(new Set(node.refs), `refs mismatch for ${id}`).toEqual(new Set(truth!.refs));
     }

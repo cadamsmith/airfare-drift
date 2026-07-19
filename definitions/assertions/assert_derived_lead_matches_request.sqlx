@@ -1,5 +1,6 @@
 config {
   type: "assertion",
+  tags: ["assertion", "data-quality"],
   description: "INTEGRITY: the trip axes DERIVED downstream from dates (constraint #3 — never trust the request) must agree with the request metadata ingestion recorded. days_to_departure (= outbound − snapshot) must equal advance_days, and stay_length_days (= return − outbound) must equal return_gap_days. A mismatch means an ingestion date-boundary/timezone bug (the run's snapshot_date disagreeing with the advance_days it computed at request time) — exactly the class of silent corruption the derive-downstream discipline exists to surface. Joins the offer grain back to the deduped snapshot on the trip key."
 }
 

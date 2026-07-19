@@ -15,6 +15,9 @@ vi.mock("../src/DagGraph.js", () => ({
           {`select:${n.id}`}
         </button>
       ))}
+      <button type="button" onClick={() => onSelectNode(null)}>
+        pane
+      </button>
     </div>
   ),
 }));
@@ -63,6 +66,14 @@ describe("App", () => {
     expect(within(panel).getByRole("button", { name: "src" })).toBeInTheDocument();
     await userEvent.click(within(panel).getByRole("button", { name: "Go to file" }));
     expect(bridge.sent).toContainEqual({ type: "openFile", nodeId: "mid", filePath: "def/mid.sqlx" });
+  });
+
+  it("clears the detail panel when the canvas background is clicked", async () => {
+    render(<App bridge={new MockBridge(graph)} />);
+    await userEvent.click(await screen.findByRole("button", { name: "select:mid" }));
+    expect(screen.getByRole("complementary")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "pane" }));
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 
   it("hides Go to file when the host cannot open files", async () => {

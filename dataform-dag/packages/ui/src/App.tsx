@@ -2,13 +2,8 @@ import { useMemo, useState } from "react";
 import type { DataformNode } from "@dataform-dag/core";
 import type { HostBridge } from "./HostBridge.js";
 import { useHostBridge } from "./useHostBridge.js";
-import {
-  NODE_COLORS,
-  downstreamOf,
-  indexGraph,
-  layoutGraph,
-  upstreamOf,
-} from "./graphToFlow.js";
+import { NODE_COLORS, downstreamOf, indexGraph, upstreamOf } from "./graphToFlow.js";
+import { useLayout } from "./useLayout.js";
 import { DagGraph } from "./DagGraph.js";
 import { NodeDetailPanel } from "./NodeDetailPanel.js";
 import "./app.css";
@@ -22,7 +17,7 @@ export function App({ bridge }: AppProps): JSX.Element {
   const { graph, focusRequest } = useHostBridge(bridge);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { capabilities } = bridge;
-  const flow = useMemo(() => (graph ? layoutGraph(graph) : null), [graph]);
+  const flow = useLayout(graph);
   const index = useMemo(() => (graph ? indexGraph(graph) : null), [graph]);
   const selected: DataformNode | null =
     (index && selectedId && index.byId.get(selectedId)) || null;

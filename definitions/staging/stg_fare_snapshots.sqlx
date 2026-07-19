@@ -1,5 +1,6 @@
 config {
   type: "incremental",
+  tags: ["staging"],
   schema: "airfare_staging",
   description: "One row per DEDUPED, route-scoped fare snapshot (grain: snapshot_date × outbound_date × return_date). Dedup happens HERE, before any offer×leg fan-out, so duplicate/retried runs collapse first. Keeps every scoped row (incl. failed fetches) with an is_valid_fetch flag so the freshness assertion can tell 'run never fired' from 'run fired, fetch failed'. Parses raw_response once into a JSON column for downstream unnest; lifts the per-call price_insights (Google's own comparison signal). Incremental: scans only new snapshot_date partitions — dedup is fully within-partition because a run always writes its own ingestion-day partition.",
   uniqueKey: ["snapshot_date", "outbound_date", "return_date"],

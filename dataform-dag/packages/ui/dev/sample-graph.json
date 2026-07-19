@@ -4,7 +4,10 @@
       "id": "assert_derived_lead_matches_request",
       "filePath": "packages/core/test/fixtures/definitions/assertions/assert_derived_lead_matches_request.sqlx",
       "type": "assertion",
-      "tags": [],
+      "tags": [
+        "assertion",
+        "data-quality"
+      ],
       "refs": [
         "int_fare_offers",
         "stg_fare_snapshots"
@@ -15,7 +18,10 @@
       "id": "assert_fare_price_bounds",
       "filePath": "packages/core/test/fixtures/definitions/assertions/assert_fare_price_bounds.sqlx",
       "type": "assertion",
-      "tags": [],
+      "tags": [
+        "assertion",
+        "data-quality"
+      ],
       "refs": [
         "int_fare_offers"
       ],
@@ -25,7 +31,10 @@
       "id": "assert_snapshot_freshness",
       "filePath": "packages/core/test/fixtures/definitions/assertions/assert_snapshot_freshness.sqlx",
       "type": "assertion",
-      "tags": [],
+      "tags": [
+        "assertion",
+        "monitoring"
+      ],
       "refs": [
         "stg_fare_snapshots"
       ],
@@ -35,7 +44,10 @@
       "id": "booking_curve_baseline",
       "filePath": "packages/core/test/fixtures/definitions/intermediate/booking_curve_baseline.sqlx",
       "type": "view",
-      "tags": [],
+      "tags": [
+        "intermediate",
+        "baseline"
+      ],
       "refs": [
         "int_daily_fare_stats",
         "int_trip_fares"
@@ -46,7 +58,10 @@
       "id": "fare_surface_baseline",
       "filePath": "packages/core/test/fixtures/definitions/intermediate/fare_surface_baseline.sqlx",
       "type": "view",
-      "tags": [],
+      "tags": [
+        "intermediate",
+        "baseline"
+      ],
       "refs": [
         "int_daily_fare_stats",
         "int_trip_fares"
@@ -57,7 +72,10 @@
       "id": "int_daily_fare_stats",
       "filePath": "packages/core/test/fixtures/definitions/intermediate/int_daily_fare_stats.sqlx",
       "type": "incremental",
-      "tags": [],
+      "tags": [
+        "intermediate",
+        "baseline"
+      ],
       "refs": [
         "int_trip_fares"
       ],
@@ -67,7 +85,10 @@
       "id": "int_event_context",
       "filePath": "packages/core/test/fixtures/definitions/intermediate/int_event_context.sqlx",
       "type": "view",
-      "tags": [],
+      "tags": [
+        "intermediate",
+        "events"
+      ],
       "refs": [
         "int_trip_fares",
         "dim_events"
@@ -78,7 +99,9 @@
       "id": "int_fare_offers",
       "filePath": "packages/core/test/fixtures/definitions/intermediate/int_fare_offers.sqlx",
       "type": "incremental",
-      "tags": [],
+      "tags": [
+        "intermediate"
+      ],
       "refs": [
         "stg_fare_offers"
       ],
@@ -88,7 +111,10 @@
       "id": "int_trip_fares",
       "filePath": "packages/core/test/fixtures/definitions/intermediate/int_trip_fares.sqlx",
       "type": "incremental",
-      "tags": [],
+      "tags": [
+        "intermediate",
+        "core"
+      ],
       "refs": [
         "int_fare_offers"
       ],
@@ -98,7 +124,10 @@
       "id": "seasonal_baseline",
       "filePath": "packages/core/test/fixtures/definitions/intermediate/seasonal_baseline.sqlx",
       "type": "view",
-      "tags": [],
+      "tags": [
+        "intermediate",
+        "baseline"
+      ],
       "refs": [
         "int_daily_fare_stats",
         "int_trip_fares"
@@ -109,7 +138,10 @@
       "id": "fct_fare_anomaly",
       "filePath": "packages/core/test/fixtures/definitions/marts/fct_fare_anomaly.sqlx",
       "type": "table",
-      "tags": [],
+      "tags": [
+        "marts",
+        "anomaly"
+      ],
       "refs": [
         "int_trip_fares",
         "int_daily_fare_stats"
@@ -120,7 +152,11 @@
       "id": "fct_fare_anomaly_events",
       "filePath": "packages/core/test/fixtures/definitions/marts/fct_fare_anomaly_events.sqlx",
       "type": "view",
-      "tags": [],
+      "tags": [
+        "marts",
+        "anomaly",
+        "events"
+      ],
       "refs": [
         "fct_fare_anomaly",
         "int_event_context"
@@ -131,7 +167,10 @@
       "id": "dim_events",
       "filePath": "packages/core/test/fixtures/definitions/reference/dim_events.sqlx",
       "type": "table",
-      "tags": [],
+      "tags": [
+        "reference",
+        "events"
+      ],
       "refs": [],
       "description": "Curated Moroccan travel-demand event calendar — the multi-source seam that makes the seasonal/anomaly layers event-aware (docs/warehouse.md layer #5). Grain: one row per event OCCURRENCE (a specific year's Ramadan, Eid, etc.). Deliberately scoped to the demand drivers of a US→Morocco diaspora leisure route: the LUNAR religious events (Ramadan window + the Eid family-visit peaks + Mawlid/Hijra markers) that DRIFT ~11 days/yr against the Gregorian calendar — the marquee wrinkle a month-of-year seasonal baseline structurally cannot capture — plus the FIXED summer school-holiday window (the big leisure peak already visible in the fares). Single-day civic holidays (Throne Day, Green March, Independence Day) are intentionally excluded: low leisure-travel signal for this route, and they'd add breadth over depth.\n\nSHAPE: point events (Eid, Mawlid, Hijra New Year) get start_date = end_date and are consumed as SIGNED days-to-event; windows (Ramadan, summer school) get a real span and are consumed as in_window flags — never conflate a month-long fast with a one-day feast (int_event_context keeps them distinct).\n\nPROVENANCE: dates curated from timeanddate.com / publicholidays.africa / holidays-info.com (Morocco). LUNAR dates depend on moon sighting and may differ from the observed Moroccan date by ±1 day; the summer school-holiday window is APPROXIMATE (public-school break, ~early Jul–early Sep). Static data-as-code (user decision 2026-07-12) — deterministic, no API budget, reproducible; lunar dates are publishable years ahead. Refresh the far-out years as observed dates firm up."
     },
@@ -147,7 +186,9 @@
       "id": "stg_fare_offers",
       "filePath": "packages/core/test/fixtures/definitions/staging/stg_fare_offers.sqlx",
       "type": "incremental",
-      "tags": [],
+      "tags": [
+        "staging"
+      ],
       "refs": [
         "stg_fare_snapshots"
       ],
@@ -157,7 +198,9 @@
       "id": "stg_fare_snapshots",
       "filePath": "packages/core/test/fixtures/definitions/staging/stg_fare_snapshots.sqlx",
       "type": "incremental",
-      "tags": [],
+      "tags": [
+        "staging"
+      ],
       "refs": [
         "fare_snapshots"
       ],

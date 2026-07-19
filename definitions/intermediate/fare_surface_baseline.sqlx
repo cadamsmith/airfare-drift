@@ -1,5 +1,6 @@
 config {
   type: "view",
+  tags: ["intermediate", "baseline"],
   schema: "airfare_intermediate",
   description: "The JOINT expectation surface: expected CHEAPEST fare per (lead_time_bucket × departure_month) cell (grain: one row per joint cell) for the DEFAULT-STAY product. This is the honest expected surface the residual model scores against — booking_curve_baseline and seasonal_baseline are its two marginals (summed over month / over lead), useful for EDA but BIASED as a predictor because the panel makes lead & month collinear (a mid-July snapshot forces Aug=short-lead, spring=long-lead). Exposing the joint cell lets Looker render the booking-curve HEATMAP (lead × month → mean fare) directly instead of reconstructing it from marginals. Sums the additive sufficient stats of int_daily_fare_stats by (lead_bucket_min, departure_month) — no history rescan; the LOO per-observation variant lives in fct_fare_anomaly. MATURITY: is_reliable gates on DISTINCT ANCHORS (independent trips), not n_observations (the panel re-observes each anchor). Today the surface is DIAGONAL and sparse — that collinearity is exactly why the joint model exists, so the sparse diagonal is the visual argument, not a defect. stddev_fare NULL when n_observations < 2.",
   columns: {

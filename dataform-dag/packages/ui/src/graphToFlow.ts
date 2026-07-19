@@ -18,17 +18,23 @@ export interface FlowNode {
   width: number;
   height: number;
 }
+export interface Point {
+  x: number;
+  y: number;
+}
 export interface FlowEdge {
   id: string;
   source: string;
   target: string;
+  /** Routed polyline (start → bends → end) when a router (ELK) produced one; else undefined. */
+  points?: Point[];
 }
 export interface FlowGraph {
   nodes: FlowNode[];
   edges: FlowEdge[];
 }
 
-const NODE_H = 46;
+export const NODE_H = 46;
 const CHAR_W = 7.7; // ~monospace advance at 13px
 const NODE_PAD = 54; // left accent + horizontal padding
 

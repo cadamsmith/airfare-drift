@@ -5,6 +5,9 @@ import react from "@vitejs/plugin-react";
 // with no VS Code and no real project — spec step 2. The two hosts consume the same src later.
 export default defineConfig({
   plugins: [react()],
+  // elkjs is a deliberately lazy ~1.4 MB chunk (dynamic import in elkLayout.ts), off the initial
+  // load path — raise the warning threshold above it so it doesn't flag on every build.
+  build: { chunkSizeWarningLimit: 1600 },
   test: {
     environment: "jsdom",
     globals: true,

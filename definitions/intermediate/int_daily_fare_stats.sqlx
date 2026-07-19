@@ -1,5 +1,6 @@
 config {
   type: "incremental",
+  tags: ["intermediate", "baseline"],
   schema: "airfare_intermediate",
   description: "Additive sufficient statistics behind both marginal baselines (grain: snapshot_date × lead_time_bucket × departure_month), aggregated from int_trip_fares filtered to the DEFAULT STAY (product consistency — a 14/21-day trip must not enter a 7-day cell). Moments (n, sum, sum_sq, min/max, +log moments) are additive, so booking_curve_baseline sums over month and seasonal_baseline sums over lead-bucket, both exact. NOTE: n_observations counts trip-OBSERVATIONS, which the re-observing panel inflates beyond independent trips — the reliability gate downstream uses DISTINCT ANCHORS (computed separately from int_trip_fares), never this count. Incremental-correctness core: partitioned by snapshot_date + MERGE-replace on the cell key → boundary reprocessing is idempotent. Incremental by snapshot_date.",
   uniqueKey: ["snapshot_date", "lead_bucket_min", "departure_month"],

@@ -1,5 +1,6 @@
 config {
   type: "assertion",
+  tags: ["assertion", "monitoring"],
   description: "FRESHNESS backstop — the continuous-accumulation guarantee (constraint #4). Fails when no VALID fetch has landed recently, i.e. the ingestion pipeline has silently stopped writing. Uses is_valid_fetch (not just any row) so it distinguishes 'run never fired' from 'run fired but every fetch failed' — a partition full of error rows is still stale for modeling. Complements the per-call error isolation + Scheduler retries: those keep one run resilient; this detects a run that stopped happening at all."
 }
 
