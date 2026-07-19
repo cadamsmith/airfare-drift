@@ -4,11 +4,11 @@ Interactive DAG viewer for a Dataform project's dependency graph — parsed loca
 files, no cloud connection required. Ships as **one shared core + one shared UI behind two hosts**:
 a VS Code extension and a standalone local web app.
 
-> **Status:** early build. `packages/core` (parser + graph + graph sources) and `packages/ui`
-> (host-agnostic React Flow canvas + `HostBridge` seam, runnable standalone against a mock bridge)
-> are in place; the two hosts (`apps/web`, `apps/extension`) follow. Currently developed inside the
-> `airfare-drift` repo, which supplies a real Dataform project as a test fixture; it will move to its
-> own repo at MVP.
+> **Status:** MVP. `packages/core` (parser + graph + graph sources) and `packages/ui` (host-agnostic
+> React Flow canvas + `HostBridge` seam) are in place, and both hosts now run against real projects:
+> `apps/extension` (VS Code webview) and `apps/web` (browser, File System Access API). Currently
+> developed inside the `airfare-drift` repo, which supplies a real Dataform project as a test fixture;
+> it will move to its own repo at MVP.
 
 ## Layout
 
@@ -18,8 +18,19 @@ dataform-dag/
 │   ├── core/   # pure TS: .sqlx parser + graph builder + graph sources (regex | compile)
 │   └── ui/     # host-agnostic React Flow canvas + node detail, talks only via HostBridge
 └── apps/
-    ├── extension/  # (later) VS Code host
-    └── web/        # (later) browser host
+    ├── extension/  # VS Code host — webview + FileSystemWatcher, HostBridge over postMessage
+    └── web/        # browser host — File System Access API, HostBridge in-page
+```
+
+## Run a host
+
+```bash
+npm install && npm run build:core
+
+# VS Code extension: open apps/extension in VS Code, press F5, then run
+# "Dataform DAG: Show Graph" in the Extension Development Host. (see apps/extension/README.md)
+
+npm run dev -w @dataform-dag/web   # browser host → open the URL, pick a Dataform folder
 ```
 
 ## Try the UI standalone
