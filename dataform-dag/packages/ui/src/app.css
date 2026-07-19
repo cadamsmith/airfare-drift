@@ -1,3 +1,11 @@
+/* App fills its host: without a height chain up to <html>, the flex canvas collapses to 0 and the
+   graph renders blank while the topbar still shows. Every host mounts into #root. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
 .ddag-app {
   display: flex;
   flex-direction: column;
